@@ -2103,7 +2103,7 @@ ENABLE_MEMORIES = PersistentConfig(
 ENABLE_MEMORY_SUMMARY = PersistentConfig(
     "ENABLE_MEMORY_SUMMARY",
     "memories.summary.enable",
-    os.environ.get("ENABLE_MEMORY_SUMMARY", "True").lower() == "true",
+    os.environ.get("ENABLE_MEMORY_SUMMARY", "False").lower() == "true",
 )
 
 MEMORY_SUMMARY_SCHEDULE = PersistentConfig(

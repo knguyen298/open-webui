@@ -29,6 +29,10 @@ from open_webui.utils.task import (
 
 log = logging.getLogger(__name__)
 
+SECONDS_PER_DAY = 86400
+MISFIRE_GRACE_TIME_SECONDS = 3600
+USER_BATCH_SIZE = 100
+
 
 def select_messages_for_summary(
     messages: list[dict],
@@ -119,6 +123,14 @@ def _extract_completion_content(response) -> Optional[str]:
     return None
 
 
+def _build_token_params(model: dict, max_tokens: int) -> dict:
+    return (
+        {"max_tokens": max_tokens}
+        if model.get("owned_by") == "ollama"
+        else {"max_completion_tokens": max_tokens}
+    )
+
+
 def _build_chat_summary_prompt(
     template: str,
     messages: list[dict],
@@ -201,11 +213,7 @@ async def _generate_summary(
         "model": model_id,
         "messages": [{"role": "user", "content": prompt}],
         "stream": False,
-        **(
-            {"max_tokens": max_tokens}
-            if models[model_id].get("owned_by") == "ollama"
-            else {"max_completion_tokens": max_tokens}
-        ),
+        **_build_token_params(models[model_id], max_tokens),
         "metadata": metadata,
     }
 
@@ -299,7 +307,7 @@ async def generate_user_memory_summary(app, request: Request, user: UserModel) -
 
     now = int(time.time())
     recent_days = app.state.config.MEMORY_SUMMARY_RECENT_DAYS
-    cutoff_timestamp = now - (recent_days * 86400) if recent_days > 0 else None
+    cutoff_timestamp = now - (recent_days * SECONDS_PER_DAY) if recent_days > 0 else None
 
     chats_response = Chats.get_chats_by_user_id(user.id)
     chat_summaries = []
@@ -354,12 +362,22 @@ async def run_memory_summary_job(app) -> None:
     if not app.state.MODELS:
         await get_all_models(request, user=None)
 
-    users = Users.get_users().get("users", [])
-    for user in users:
-        try:
-            await generate_user_memory_summary(app, request, user)
-        except Exception as exc:
-            log.exception("Memory summary job failed for user %s: %s", user.id, exc)
+    skip = 0
+    while True:
+        batch = Users.get_users(skip=skip, limit=USER_BATCH_SIZE)
+        users = batch.get("users", [])
+        if not users:
+            break
+
+        for user in users:
+            try:
+                await generate_user_memory_summary(app, request, user)
+            except Exception as exc:
+                log.exception(
+                    "Memory summary job failed for user %s: %s", user.id, exc
+                )
+
+        skip += USER_BATCH_SIZE
 
 
 def setup_memory_summary_scheduler(app) -> Optional[AsyncIOScheduler]:
@@ -392,7 +410,7 @@ def setup_memory_summary_scheduler(app) -> Optional[AsyncIOScheduler]:
         id="memory_summary",
         coalesce=True,
         max_instances=1,
-        misfire_grace_time=3600,
+        misfire_grace_time=MISFIRE_GRACE_TIME_SECONDS,
     )
     scheduler.start()
     log.info("Memory summary scheduler started (%s at %02d:%02d).", schedule, hour, minute)
