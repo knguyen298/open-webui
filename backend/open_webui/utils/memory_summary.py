@@ -93,7 +93,10 @@ def _parse_schedule_time(time_value: str) -> tuple[int, int]:
         parsed_time = datetime.strptime((time_value or "").strip(), "%H:%M")
         return parsed_time.hour, parsed_time.minute
     except Exception:
-        log.warning("Invalid MEMORY_SUMMARY_TIME format '%s'. Using 02:00.", time_value)
+        log.warning(
+            "Invalid MEMORY_SUMMARY_TIME format '%s'. Expected HH:MM (e.g., 02:00). Using 02:00.",
+            time_value,
+        )
         return 2, 0
 
 
@@ -148,7 +151,8 @@ def _select_task_model_id(app, user: UserModel) -> Optional[str]:
         return None
 
     default_models = (app.state.config.DEFAULT_MODELS or "").split(",")
-    default_model_id = default_models[0].strip() if default_models[0].strip() else None
+    stripped_model = default_models[0].strip() if default_models else ""
+    default_model_id = stripped_model if stripped_model else None
     if not default_model_id:
         default_model_id = next(iter(models.keys()), None)
 
@@ -364,7 +368,10 @@ def setup_memory_summary_scheduler(app) -> Optional[AsyncIOScheduler]:
 
     schedule = (app.state.config.MEMORY_SUMMARY_SCHEDULE or "").lower()
     if schedule not in ("daily", "weekly"):
-        log.info("Memory summary scheduler disabled (schedule=%s).", schedule)
+        log.info(
+            "Memory summary scheduler disabled (schedule=%s). Valid options are 'daily' or 'weekly'.",
+            schedule,
+        )
         return None
 
     hour, minute = _parse_schedule_time(app.state.config.MEMORY_SUMMARY_TIME)
