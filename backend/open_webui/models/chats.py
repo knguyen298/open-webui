@@ -372,6 +372,23 @@ class ChatTable:
         except Exception:
             return None
 
+    def update_chat_meta_by_id(
+        self, id: str, meta: dict, db: Optional[Session] = None
+    ) -> Optional[ChatModel]:
+        try:
+            with get_db_context(db) as db:
+                chat_item = db.get(Chat, id)
+                if not chat_item:
+                    return None
+
+                chat_item.meta = meta
+                db.commit()
+                db.refresh(chat_item)
+
+                return ChatModel.model_validate(chat_item)
+        except Exception:
+            return None
+
     def update_chat_title_by_id(self, id: str, title: str) -> Optional[ChatModel]:
         chat = self.get_chat_by_id(id)
         if chat is None:

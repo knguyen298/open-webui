@@ -2,9 +2,11 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel
 import logging
 import asyncio
+import time
 from typing import Optional
 
 from open_webui.models.memories import Memories, MemoryModel
+from open_webui.models.users import Users
 from open_webui.retrieval.vector.factory import VECTOR_DB_CLIENT
 from open_webui.utils.auth import get_verified_user
 from open_webui.internal.db import get_session
@@ -100,6 +102,20 @@ async def add_memory(
             }
         ],
     )
+
+    user_record = Users.get_user_by_id(user.id, db=db)
+    user_settings = user_record.settings or {} if user_record else {}
+    memory_settings = user_settings.get("memory", {})
+    existing_summary = memory_settings.get("summary", "")
+    updated_summary = (
+        f"{existing_summary}\n{memory.content}".strip()
+        if existing_summary
+        else memory.content
+    )
+    memory_settings.update(
+        {"summary": updated_summary, "summary_updated_at": int(time.time())}
+    )
+    Users.update_user_settings_by_id(user.id, {"memory": memory_settings}, db=db)
 
     return memory
 

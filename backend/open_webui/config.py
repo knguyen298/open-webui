@@ -2100,6 +2100,90 @@ ENABLE_MEMORIES = PersistentConfig(
     os.environ.get("ENABLE_MEMORIES", "True").lower() == "true",
 )
 
+ENABLE_MEMORY_SUMMARY = PersistentConfig(
+    "ENABLE_MEMORY_SUMMARY",
+    "memories.summary.enable",
+    os.environ.get("ENABLE_MEMORY_SUMMARY", "True").lower() == "true",
+)
+
+MEMORY_SUMMARY_SCHEDULE = PersistentConfig(
+    "MEMORY_SUMMARY_SCHEDULE",
+    "memories.summary.schedule",
+    os.environ.get("MEMORY_SUMMARY_SCHEDULE", "daily"),
+)
+
+MEMORY_SUMMARY_TIME = PersistentConfig(
+    "MEMORY_SUMMARY_TIME",
+    "memories.summary.time",
+    os.environ.get("MEMORY_SUMMARY_TIME", "02:00"),
+)
+
+MEMORY_SUMMARY_WEEKDAY = PersistentConfig(
+    "MEMORY_SUMMARY_WEEKDAY",
+    "memories.summary.weekday",
+    os.environ.get("MEMORY_SUMMARY_WEEKDAY", "sun"),
+)
+
+MEMORY_SUMMARY_RECENT_DAYS = PersistentConfig(
+    "MEMORY_SUMMARY_RECENT_DAYS",
+    "memories.summary.recent_days",
+    int(os.environ.get("MEMORY_SUMMARY_RECENT_DAYS", "0")),
+)
+
+MEMORY_SUMMARY_FIRST_N_MESSAGES = PersistentConfig(
+    "MEMORY_SUMMARY_FIRST_N_MESSAGES",
+    "memories.summary.first_n_messages",
+    int(os.environ.get("MEMORY_SUMMARY_FIRST_N_MESSAGES", "0")),
+)
+
+MEMORY_SUMMARY_LAST_N_MESSAGES = PersistentConfig(
+    "MEMORY_SUMMARY_LAST_N_MESSAGES",
+    "memories.summary.last_n_messages",
+    int(os.environ.get("MEMORY_SUMMARY_LAST_N_MESSAGES", "0")),
+)
+
+MEMORY_SUMMARY_USER_MESSAGES_ONLY = PersistentConfig(
+    "MEMORY_SUMMARY_USER_MESSAGES_ONLY",
+    "memories.summary.user_messages_only",
+    os.environ.get("MEMORY_SUMMARY_USER_MESSAGES_ONLY", "False").lower() == "true",
+)
+
+MEMORY_CHAT_SUMMARY_PROMPT_TEMPLATE = PersistentConfig(
+    "MEMORY_CHAT_SUMMARY_PROMPT_TEMPLATE",
+    "memories.summary.chat_prompt_template",
+    os.environ.get("MEMORY_CHAT_SUMMARY_PROMPT_TEMPLATE", ""),
+)
+
+DEFAULT_MEMORY_CHAT_SUMMARY_PROMPT_TEMPLATE = """### Task:
+Summarize the chat topic and key points for long-term memory. Update the summary if one already exists.
+
+Chat title: {{CHAT_TITLE}}
+
+Existing summary:
+{{EXISTING_SUMMARY}}
+
+Messages:
+{{MESSAGES}}
+
+Return a concise summary with key facts, preferences, and decisions."""
+
+MEMORY_SUMMARY_PROMPT_TEMPLATE = PersistentConfig(
+    "MEMORY_SUMMARY_PROMPT_TEMPLATE",
+    "memories.summary.prompt_template",
+    os.environ.get("MEMORY_SUMMARY_PROMPT_TEMPLATE", ""),
+)
+
+DEFAULT_MEMORY_SUMMARY_PROMPT_TEMPLATE = """### Task:
+Update the long-term memory summary for the user using the existing summary and chat summaries.
+
+Existing memory summary:
+{{MEMORY_SUMMARY}}
+
+Chat summaries:
+{{CHAT_SUMMARIES}}
+
+Return an updated concise memory summary."""
+
 CODE_INTERPRETER_ENGINE = PersistentConfig(
     "CODE_INTERPRETER_ENGINE",
     "code_interpreter.engine",

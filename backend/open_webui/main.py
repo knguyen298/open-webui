@@ -60,6 +60,7 @@ from starsessions.stores.redis import RedisStore
 from open_webui.utils import logger
 from open_webui.utils.audit import AuditLevel, AuditLoggingMiddleware
 from open_webui.utils.logger import start_logger
+from open_webui.utils.memory_summary import setup_memory_summary_scheduler
 from open_webui.socket.main import (
     MODELS,
     app as socket_app,
@@ -146,6 +147,16 @@ from open_webui.config import (
     CODE_INTERPRETER_JUPYTER_AUTH_PASSWORD,
     CODE_INTERPRETER_JUPYTER_TIMEOUT,
     ENABLE_MEMORIES,
+    ENABLE_MEMORY_SUMMARY,
+    MEMORY_SUMMARY_SCHEDULE,
+    MEMORY_SUMMARY_TIME,
+    MEMORY_SUMMARY_WEEKDAY,
+    MEMORY_SUMMARY_RECENT_DAYS,
+    MEMORY_SUMMARY_FIRST_N_MESSAGES,
+    MEMORY_SUMMARY_LAST_N_MESSAGES,
+    MEMORY_SUMMARY_USER_MESSAGES_ONLY,
+    MEMORY_CHAT_SUMMARY_PROMPT_TEMPLATE,
+    MEMORY_SUMMARY_PROMPT_TEMPLATE,
     # Image
     AUTOMATIC1111_API_AUTH,
     AUTOMATIC1111_BASE_URL,
@@ -645,10 +656,16 @@ async def lifespan(app: FastAPI):
             None,
         )
 
+    app.state.memory_summary_scheduler = setup_memory_summary_scheduler(app)
+
     yield
 
     if hasattr(app.state, "redis_task_command_listener"):
         app.state.redis_task_command_listener.cancel()
+
+    memory_summary_scheduler = getattr(app.state, "memory_summary_scheduler", None)
+    if memory_summary_scheduler:
+        memory_summary_scheduler.shutdown()
 
 
 app = FastAPI(
@@ -1121,6 +1138,18 @@ app.state.config.IMAGE_GENERATION_ENGINE = IMAGE_GENERATION_ENGINE
 app.state.config.ENABLE_IMAGE_GENERATION = ENABLE_IMAGE_GENERATION
 app.state.config.ENABLE_IMAGE_PROMPT_GENERATION = ENABLE_IMAGE_PROMPT_GENERATION
 app.state.config.ENABLE_MEMORIES = ENABLE_MEMORIES
+app.state.config.ENABLE_MEMORY_SUMMARY = ENABLE_MEMORY_SUMMARY
+app.state.config.MEMORY_SUMMARY_SCHEDULE = MEMORY_SUMMARY_SCHEDULE
+app.state.config.MEMORY_SUMMARY_TIME = MEMORY_SUMMARY_TIME
+app.state.config.MEMORY_SUMMARY_WEEKDAY = MEMORY_SUMMARY_WEEKDAY
+app.state.config.MEMORY_SUMMARY_RECENT_DAYS = MEMORY_SUMMARY_RECENT_DAYS
+app.state.config.MEMORY_SUMMARY_FIRST_N_MESSAGES = MEMORY_SUMMARY_FIRST_N_MESSAGES
+app.state.config.MEMORY_SUMMARY_LAST_N_MESSAGES = MEMORY_SUMMARY_LAST_N_MESSAGES
+app.state.config.MEMORY_SUMMARY_USER_MESSAGES_ONLY = MEMORY_SUMMARY_USER_MESSAGES_ONLY
+app.state.config.MEMORY_CHAT_SUMMARY_PROMPT_TEMPLATE = (
+    MEMORY_CHAT_SUMMARY_PROMPT_TEMPLATE
+)
+app.state.config.MEMORY_SUMMARY_PROMPT_TEMPLATE = MEMORY_SUMMARY_PROMPT_TEMPLATE
 
 app.state.config.IMAGE_GENERATION_MODEL = IMAGE_GENERATION_MODEL
 app.state.config.IMAGE_SIZE = IMAGE_SIZE
