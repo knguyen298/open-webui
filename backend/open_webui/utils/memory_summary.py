@@ -32,6 +32,7 @@ log = logging.getLogger(__name__)
 SECONDS_PER_DAY = 86400
 MISFIRE_GRACE_TIME_SECONDS = 3600
 USER_BATCH_SIZE = 100
+VALID_WEEKDAYS = {"mon", "tue", "wed", "thu", "fri", "sat", "sun"}
 
 
 def select_messages_for_summary(
@@ -363,9 +364,16 @@ async def run_memory_summary_job(app) -> None:
         await get_all_models(request, user=None)
 
     skip = 0
+    total = None
     while True:
-        batch = Users.get_users(skip=skip, limit=USER_BATCH_SIZE)
+        try:
+            batch = Users.get_users(skip=skip, limit=USER_BATCH_SIZE)
+        except Exception as exc:
+            log.exception("Failed to fetch users for memory summary job: %s", exc)
+            break
+
         users = batch.get("users", [])
+        total = batch.get("total", total)
         if not users:
             break
 
@@ -378,6 +386,8 @@ async def run_memory_summary_job(app) -> None:
                 )
 
         skip += USER_BATCH_SIZE
+        if total is not None and skip >= total:
+            break
 
 
 def setup_memory_summary_scheduler(app) -> Optional[AsyncIOScheduler]:
@@ -394,8 +404,16 @@ def setup_memory_summary_scheduler(app) -> Optional[AsyncIOScheduler]:
 
     hour, minute = _parse_schedule_time(app.state.config.MEMORY_SUMMARY_TIME)
     if schedule == "weekly":
+        weekday = (app.state.config.MEMORY_SUMMARY_WEEKDAY or "sun").lower()
+        if weekday not in VALID_WEEKDAYS:
+            log.warning(
+                "Invalid MEMORY_SUMMARY_WEEKDAY '%s'. Valid options are %s. Using 'sun'.",
+                weekday,
+                ", ".join(sorted(VALID_WEEKDAYS)),
+            )
+            weekday = "sun"
         trigger = CronTrigger(
-            day_of_week=app.state.config.MEMORY_SUMMARY_WEEKDAY or "sun",
+            day_of_week=weekday,
             hour=hour,
             minute=minute,
         )

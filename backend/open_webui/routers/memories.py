@@ -106,9 +106,10 @@ async def add_memory(
     user_record = Users.get_user_by_id(user.id, db=db)
     user_settings = user_record.settings or {} if user_record else {}
     memory_settings = user_settings.get("memory", {})
-    existing_summary = memory_settings.get("summary", "")
+    existing_summary = memory_settings.get("summary", "").strip()
+    new_content = memory.content.strip()
     updated_summary = (
-        f"{existing_summary}\n{memory.content}" if existing_summary else memory.content
+        f"{existing_summary}\n{new_content}" if existing_summary else new_content
     ).strip()
     memory_settings.update(
         {"summary": updated_summary, "summary_updated_at": int(time.time())}

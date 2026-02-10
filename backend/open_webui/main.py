@@ -663,7 +663,7 @@ async def lifespan(app: FastAPI):
     if hasattr(app.state, "redis_task_command_listener"):
         app.state.redis_task_command_listener.cancel()
 
-    if app.state.memory_summary_scheduler:
+    if app.state.memory_summary_scheduler and app.state.memory_summary_scheduler.running:
         app.state.memory_summary_scheduler.shutdown()
 
 
